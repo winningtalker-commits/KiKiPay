@@ -1,0 +1,52 @@
+name: CI
+
+# Level 1 CI: compile the Compact contract and run the test suite.
+# Deploys stay manual (they need a funded wallet + local proof server).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Compact toolchain (CLI + compiler 0.34.0)
+        run: |
+          mkdir -p /tmp/compact-install && cd /tmp/compact-install
+          curl -sL -o compact-installer.sh "https://github.com/midnightntwrk/compact/releases/download/compact-v0.5.2/compact-installer.sh"
+          sh compact-installer.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.compact/bin" >> "$GITHUB_PATH"
+          compact update 0.34.0
+
+      - name: Verify toolchain
+        run: |
+          compact --version
+          compact compile --version || true
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Compile KiKiPay contract (managed/ + ZK keys)
+        run: npm run compile
+
+      - name: Verify managed/ artifacts exist
+        run: |
+          test -d contracts/managed/kikipay/keys || { echo "missing proving keys"; exit 1; }
+          test -f contracts/managed/kikipay/contract/index.js || { echo "missing contract JS"; exit 1; }
+          ls contracts/managed/kikipay/keys
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Run test suite
+        run: npm test
