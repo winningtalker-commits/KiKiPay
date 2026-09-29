@@ -17,6 +17,19 @@ curl -s -X POST https://indexer.preview.midnight.network/api/v4/graphql \
   -d '{"query":"{ contract(address: \"74d6f4b7f37dbb455b4d89edd8d3e6e869ee077c3e27a9671101220203fc261f\") { address state } }"}'
 ```)
 
+### Deployer wallets
+
+The wallets that paid the deploy transactions (testnet tNIGHT only):
+
+| Network | Deployer address | Fund with tNIGHT |
+|---------|------------------------------------------------------------------|---|
+| Preview | `mn_addr_preview1we7ldv0fr39nglfyz6nxe7j8szq8wyla0apx5pzkzlyhe9tn8eystp6t5x` | [faucet.preview.midnight.network](https://faucet.preview.midnight.network) |
+| Preprod | `mn_addr_preprod1tzfwpanhw67vegsvalguwpfr2nml58z9ljgltljep9zr30sqdc7s2pmlxl` | [faucet.preprod.midnight.network](https://faucet.preprod.midnight.network) |
+
+The 24-word recovery phrases are **not** committed here — they live only in
+`.midnight-state.json` (gitignored, mode `600`). Back yours up when the deploy
+script prints it; anyone holding the phrase controls the wallet.
+
 ## What This Does
 
 KiKiPay is a payroll pot for a private member list:
