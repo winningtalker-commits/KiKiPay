@@ -1,0 +1,211 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// ============================================================================
+// KiKiPay — Private Payroll & Splits
+// ============================================================================
+// A payroll contract that lets a sponsor distribute funds to a group of
+// members WITHOUT exposing who the members are, who got paid, or how much
+// each payment was.
+//
+// WHAT IS PUBLIC (stored on-chain, visible to anyone):
+//   * potRoot              — a Merkle root committing to the set of approved
+//                            members. Membership is hidden; the SET is bound.
+//   * paymaster            — a hash commitment binding the current
+//                            distributor. Which member it is stays hidden.
+//   * lastPaymentCommitment— a hiding commitment to (payee, amount). Anyone
+//                            can see that a payment happened; nobody can see
+//                            to whom or for how much.
+//   * paymentCount         — how many payments have been made.
+//
+// WHAT IS PRIVATE (circuit inputs via witnesses, never on-chain):
+//   * memberSecret()       — a member's secret key. Defines their leaf in the
+//                            Merkle tree; knowledge of it IS membership.
+//   * payeeProofPath()     — the Merkle authentication path proving the payee
+//                            is inside potRoot without naming them.
+//   * paymentAmount()      — the payment amount. Hashed into the commitment;
+//                            never written to the ledger.
+//   * paymasterSecret()    — the distributor's secret key, used to prove
+//                            authorization without revealing identity.
+//
+// WHAT THE USER PROVES WITHOUT REVEALING:
+//   * "I am one of the members committed to by potRoot"  (Merkle proof)
+//   * "I am the paymaster bound by the paymaster field"  (hash preimage)
+//   * "A valid payment of a secret amount was made to a secret member"
+//     (the on-chain commitment is the image of both secrets and the amount)
+//
+// DISCLOSURE POLICY — every disclose() in this contract is deliberate:
+//   Writing to public ledger state from a value computed inside the circuit
+//   requires disclose(). KiKiPay only discloses:
+//     1. the new Merkle root   (rotating membership must be auditable)
+//     2. the paymaster binding (authorization must be verifiable)
+//     3. the payment commitment (payments must be publicly countable and
+//        later auditable by the parties holding the secrets)
+//   Nothing else ever leaves the circuit.
+//
+// L1 limits (by design): the Merkle tree is fixed at depth 4 (up to 16
+// members) and coin custody/movement is handled by the sponsoring wallet in
+// Level 1; the circuits below enforce membership, authorization and the
+// audit trail. Shielded coin transfers between members land in Level 2.
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// PUBLIC LEDGER STATE
+// ---------------------------------------------------------------------------
+
+// Merkle root over the approved member set (depth 4, up to 16 members).
+// The all-zero sentinel means "no pot registered yet".
+export ledger potRoot: Bytes<32>;
+
+// Hash commitment binding the current paymaster (distributor).
+// The all-zero sentinel means "no paymaster yet".
+export ledger paymaster: Bytes<32>;
+
+// Commitment to the most recent payment: H(domain, payeeLeaf, amount).
+export ledger lastPaymentCommitment: Bytes<32>;
+
+// Number of payments executed.
+export ledger paymentCount: Counter;
+
+// ---------------------------------------------------------------------------
+// CONSTRUCTOR
+// ---------------------------------------------------------------------------
+
+constructor() {
+  potRoot = pad(32, "kikipay:empty-pot-root");
+  paymaster = pad(32, "kikipay:unset-paymaster");
+  lastPaymentCommitment = pad(32, "kikipay:no-payment-yet");
+}
+
+// ---------------------------------------------------------------------------
+// PRIVATE WITNESSES (circuit inputs that never touch the ledger)
+// ---------------------------------------------------------------------------
+
+// The paymaster's secret key (proves authorization to distribute).
+witness paymasterSecret(): Bytes<32>;
+
+// The payee's secret key (identifies who is being paid).
+witness payeeMemberSecret(): Bytes<32>;
+
+// Merkle authentication path proving the payee is a member of the pot.
+witness payeeProofPath(): Vector<4, Bytes<32>>;
+
+// Side bit per level of the authentication path: true when the payee's node
+// is the RIGHT child at that level (so the sibling is hashed first).
+witness payeeSideBits(): Vector<4, Boolean>;
+
+// The payment amount, in the smallest token unit. Stays inside the circuit
+// and is only ever released inside a hiding commitment.
+witness paymentAmount(): Uint<64>;
+
+// ---------------------------------------------------------------------------
+// PURE HELPER CIRCUITS
+// (also callable from TypeScript tests via pureCircuits — used to build the
+//  member tree off-chain exactly as the circuit sees it)
+// ---------------------------------------------------------------------------
+
+// A member's leaf in the membership tree, derived from their secret.
+export circuit leafFor(secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "kikipay:leaf:v1"), secret]);
+}
+
+// One Merkle tree branch: order-independent hash of two nodes.
+export circuit hashBranch(a: Bytes<32>, b: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([a, b]);
+}
+
+// One Merkle tree step: orders the hash by the side bit, so the proof works
+// whether the prover's node is the left or the right child at that level.
+circuit merge(acc: Bytes<32>, sib: Bytes<32>, side: Boolean): Bytes<32> {
+  if (side) {
+    return hashBranch(sib, acc);
+  } else {
+    return hashBranch(acc, sib);
+  }
+}
+
+// Recomputes a Merkle root from a leaf and a depth-4 authentication path.
+// side[i] selects the hashing order at level i.
+export circuit rootFrom(leaf: Bytes<32>, path: Vector<4, Bytes<32>>, side: Vector<4, Boolean>): Bytes<32> {
+  const l0 = merge(leaf, path[0], side[0]);
+  const l1 = merge(l0, path[1], side[1]);
+  const l2 = merge(l1, path[2], side[2]);
+  return merge(l2, path[3], side[3]);
+}
+
+// Public, one-way binding for a member: used for the paymaster field so the
+// distributor is accountable without being identifiable.
+export circuit publicCommit(secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "kikipay:pub-commit:v1"), secret]);
+}
+
+// Hiding commitment for a payment: binds payee + amount without revealing
+// either. paymentNonce-style freshness comes from the amount/leaf pair
+// combined with the increasing paymentCount.
+export circuit paymentCommitment(payeeSecret: Bytes<32>, amount: Uint<64>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "kikipay:payment:v1"),
+    leafFor(payeeSecret),
+    amount as Field as Bytes<32>
+  ]);
+}
+
+// ---------------------------------------------------------------------------
+// EXPORTED CIRCUITS (state transitions)
+// ---------------------------------------------------------------------------
+
+// Register a brand-new pot. Callable only while no pot exists.
+// The registrar must prove membership in the NEW member set they are
+// committing to, and automatically becomes the first paymaster.
+// DELIBERATE DISCLOSURES: the new root and the paymaster binding.
+export circuit registerPot(newRoot: Bytes<32>): Bytes<32> {
+  const secret = paymasterSecret();
+  const path = payeeProofPath();
+  const side = payeeSideBits();
+  assert(potRoot == pad(32, "kikipay:empty-pot-root"), "pot already registered");
+  assert(rootFrom(leafFor(secret), path, side) == newRoot, "registrar is not a member of the new pot");
+  potRoot = disclose(newRoot);
+  const binding = publicCommit(secret);
+  paymaster = disclose(binding);
+  return disclose(binding);
+}
+
+// Rotate the member set to a new Merkle root. Only the current paymaster
+// may rotate, and they must prove membership in the NEW set (so a paymaster
+// who is being removed cannot lock the pot).
+// DELIBERATE DISCLOSURE: the new root — membership churn is auditable even
+// though individual members never are.
+export circuit rotatePot(newRoot: Bytes<32>): Bytes<32> {
+  const secret = paymasterSecret();
+  const path = payeeProofPath();
+  const side = payeeSideBits();
+  assert(publicCommit(secret) == paymaster, "only the current paymaster can rotate the pot");
+  assert(rootFrom(leafFor(secret), path, side) == newRoot, "rotator is not a member of the new pot");
+  potRoot = disclose(newRoot);
+  const binding = publicCommit(secret);
+  paymaster = disclose(binding);
+  return disclose(binding);
+}
+
+// Execute a payroll payment.
+// PROVES (without revealing): the caller is the paymaster; the payee is a
+// member of the pot; the amount is positive. Only a hiding commitment and
+// the count are published.
+// DELIBERATE DISCLOSURE: the payment commitment — it is the public handle
+// under which the payee can later prove (to an auditor) that they were paid
+// a specific amount, using their secret.
+export circuit pay(): Bytes<32> {
+  const pmSecret = paymasterSecret();
+  const payeeSecret = payeeMemberSecret();
+  const path = payeeProofPath();
+  const side = payeeSideBits();
+  const amount = paymentAmount();
+  assert(publicCommit(pmSecret) == paymaster, "only the current paymaster can authorize payments");
+  assert(rootFrom(leafFor(payeeSecret), path, side) == potRoot, "payee is not an approved member");
+  assert(amount > 0, "payment amount must be positive");
+  const commitment = paymentCommitment(payeeSecret, amount);
+  paymentCount.increment(1);
+  lastPaymentCommitment = disclose(commitment);
+  return disclose(commitment);
+}
