@@ -4,12 +4,18 @@
 
 ## Contract Address
 
-| Network  | Address                          |
-|----------|----------------------------------|
-| Preview  | [PASTE ADDRESS AFTER DEPLOY]     |
-| Preprod  | [PASTE ADDRESS AFTER DEPLOY]     |
+| Network  | Address                                                                  |
+|----------|--------------------------------------------------------------------------|
+| Preview  | `0x74d6f4b7f37dbb455b4d89edd8d3e6e869ee077c3e27a9671101220203fc261f`     |
+| Preprod  | [not deployed]                                                           |
 
-*(This section is MANDATORY. Leave placeholders until deployed, then paste the printed contract address here.)*
+*(Deployed to Preview on 2026-09-29. Verify at [midnightexplorer.com](https://midnightexplorer.com) or via the indexer:*
+
+```bash
+curl -s -X POST https://indexer.preview.midnight.network/api/v4/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ contract(address: \"74d6f4b7f37dbb455b4d89edd8d3e6e869ee077c3e27a9671101220203fc261f\") { address state } }"}'
+```)
 
 ## What This Does
 
