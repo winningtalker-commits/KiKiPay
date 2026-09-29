@@ -172,12 +172,38 @@ async function main() {
   console.log('  ℹ  This may take several minutes depending on network size.');
   console.log('     RPC disconnection messages during sync are normal and can be safely ignored.\n');
   const syncStart = Date.now();
+  let scanPos: bigint | undefined;
+  let lastPrintedScan = -1n;
+  // Track the shielded child's scan position so long syncs show movement,
+  // not just a spinner. The state observable emits a SyncProgress somewhere
+  // in its tree; find and cache it.
+  const progressSub = walletCtx.wallet.state().subscribe((s: any) => {
+    const visit = (obj: any, seen = new Set<any>()): void => {
+      if (!obj || typeof obj !== 'object' || seen.has(obj)) return;
+      seen.add(obj);
+      if (typeof obj.appliedIndex === 'bigint') scanPos = obj.appliedIndex;
+      for (const v of Object.values(obj)) if (v && typeof v === 'object') visit(v, seen);
+    };
+    visit(s);
+  });
   const syncInterval = setInterval(() => {
     const elapsed = Math.round((Date.now() - syncStart) / 1000);
-    process.stdout.write(`\r  ⏳ Still syncing... (${elapsed}s elapsed)   `);
+    const moved = scanPos !== undefined && scanPos !== lastPrintedScan;
+    if (moved) lastPrintedScan = scanPos!;
+    const pos = moved ? ` scan=${scanPos}` : '';
+    process.stdout.write(`\r  ⏳ Still syncing... (${elapsed}s elapsed)${pos}   `);
   }, 5000);
+  // Checkpoint wallet state DURING sync: on long first syncs (preview scans
+  // the whole shielded history), a killed run otherwise restarts from zero.
+  // persistWalletState is idempotent and serializes each child's current
+  // scan position, so the next run resumes from the checkpoint.
+  const checkpointInterval = setInterval(() => {
+    void persistWalletState(network, walletCtx);
+  }, 45_000);
   const state = await walletCtx.wallet.waitForSyncedState();
   clearInterval(syncInterval);
+  clearInterval(checkpointInterval);
+  progressSub.unsubscribe();
   process.stdout.write('\r  ✓ Synced with network.                                      \n');
 
   await persistWalletState(network, walletCtx);

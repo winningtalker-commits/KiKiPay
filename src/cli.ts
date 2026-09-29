@@ -67,14 +67,14 @@ async function demoMode() {
     createConstructorContext(initial, '0'.repeat(64)),
   );
   let ctx = createCircuitContext(
-    'registerPot', sampleContractAddress(), constructed.currentZswapLocalState,
+    sampleContractAddress(), constructed.currentZswapLocalState,
     constructed.currentContractState, initial,
   );
   const asState = (ps: KikiPayPrivateState) => ({
-    ...ctx, callContext: { ...ctx.callContext, currentPrivateState: ps },
+    ...ctx, currentPrivateState: ps,
   }) as typeof ctx;
   const showLedger = () => {
-    const l = ledger(ctx.callContext.currentQueryContext.state);
+    const l = ledger(ctx.currentQueryContext.state);
     console.log('  ── PUBLIC LEDGER ──────────────────────────────');
     console.log(`  potRoot               : ${hex(l.potRoot).slice(0, 16)}…`);
     console.log(`  paymaster (commitment): ${hex(l.paymaster).slice(0, 16)}…`);

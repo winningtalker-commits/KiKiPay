@@ -64,7 +64,8 @@ in the contract is commented):
 ## Tech Stack
 
 - **Midnight network** (preview / preprod testnets, local devnet via Docker)
-- **Compact** language, compiled with `compactc` 0.34.0 (language 0.26.0) via the `compact` CLI 0.5.2
+- **Compact** language, compiled with `compactc` 0.31.1 (language 0.23.0, runtime 0.16.0) via the `compact` CLI 0.5.2
+  — this is the pairing pinned by `create-mn-app` and matched to midnight-js 4.1.1
 - **Node.js v22+**, TypeScript, vitest
 - **Docker** (proof server + local devnet)
 
@@ -82,7 +83,7 @@ in the contract is commented):
   curl -sL -o compact-installer.sh \
     "https://github.com/midnightntwrk/compact/releases/download/compact-v0.5.2/compact-installer.sh"
   sh compact-installer.sh            # installs the `compact` CLI to ~/.local/bin
-  compact update 0.34.0              # downloads the compactc 0.34.0 compiler
+  compact update 0.31.1              # downloads the compactc 0.31.1 compiler
   compact --version                  # → compact 0.5.2
   ```
 

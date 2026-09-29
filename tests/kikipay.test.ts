@@ -136,7 +136,6 @@ class KikiPaySimulator {
     );
     const constructed = await sim.contract.initialState(ctorContext);
     sim.circuitContext = createCircuitContext(
-      'registerPot',
       sampleContractAddress(),
       constructed.currentZswapLocalState,
       constructed.currentContractState,
@@ -146,20 +145,17 @@ class KikiPaySimulator {
   }
 
   getLedger(): Ledger {
-    return ledger(this.circuitContext.callContext.currentQueryContext.state);
+    return ledger(this.circuitContext.currentQueryContext.state);
   }
 
   getPrivateState(): KikiPayPrivateState {
-    return this.circuitContext.callContext.currentPrivateState as KikiPayPrivateState;
+    return this.circuitContext.currentPrivateState as KikiPayPrivateState;
   }
 
   private as(actor: KikiPayPrivateState): CircuitContext<KikiPayPrivateState> {
     return {
       ...this.circuitContext,
-      callContext: {
-        ...this.circuitContext.callContext,
-        currentPrivateState: actor,
-      },
+      currentPrivateState: actor,
     } as CircuitContext<KikiPayPrivateState>;
   }
 

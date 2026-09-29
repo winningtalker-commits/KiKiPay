@@ -19,14 +19,14 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install Compact toolchain (CLI + compiler 0.34.0)
+      - name: Install Compact toolchain (CLI + compiler 0.31.1)
         run: |
           mkdir -p /tmp/compact-install && cd /tmp/compact-install
           curl -sL -o compact-installer.sh "https://github.com/midnightntwrk/compact/releases/download/compact-v0.5.2/compact-installer.sh"
           sh compact-installer.sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           echo "$HOME/.compact/bin" >> "$GITHUB_PATH"
-          compact update 0.34.0
+          compact update 0.31.1
 
       - name: Verify toolchain
         run: |
