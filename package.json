@@ -8,9 +8,10 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "npm run typecheck && vite build",
+    "dev": "npm run copy-zk && vite",
+    "build": "npm run copy-zk && npm run typecheck && vite build",
     "preview": "vite preview",
+    "copy-zk": "node scripts/copy-zk-assets.mjs",
     "compile": "compact compile contracts/kikipay.compact contracts/managed/kikipay",
     "typecheck": "npx tsc --noEmit",
     "test": "vitest run",

@@ -62,3 +62,6 @@ temp/
 # Midnight wallet sync state (per-network serialized wallet state cache)
 .midnight-wallet-state/
 .freebuff/
+
+# Vite-served ZK assets (copied from contracts/managed by scripts/copy-zk-assets.mjs)
+public/contract/
