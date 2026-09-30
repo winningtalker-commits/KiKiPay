@@ -15,10 +15,10 @@ build/
 .env.test.local
 .env.production.local
 
-# Contract artifacts (regenerate with: npm run compile)
-# NOTE: the challenge wants managed/ to exist after compiling — it is produced
-# by `npm run compile` and intentionally not committed (56 MB of prover keys).
-contracts/managed/
+# Contract artifacts (compiled output)
+# NOTE: Level 2 — the browser dApp needs the compiled contract + ZK keys at
+# runtime (proving happens client-side), so managed/ is now COMMITTED, like
+# the official midnight-wallet-dapp template does. Regenerate: npm run compile
 
 # Deployment info
 deployment.json
