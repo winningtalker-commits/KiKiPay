@@ -263,37 +263,50 @@ beside the contract it belongs to.
 
 ## Initial Idea
 
-Payroll is one of the most sensitive data flows inside any organization. Every
-month, a traditional payroll run leaks the full social graph of a company —
-who is on the list, who got paid this cycle, and exactly how much each person
-earns — to the bank, the blockchain (if paid on-chain), and anyone who can
-read the ledger. For activist groups, diaspora communities sending money home,
-or DAOs with anonymous contributors, that leak is not a compliance footnote;
-it is a safety problem.
+I started from a problem I kept running into: payroll leaks. Every month a
+traditional payroll run exposes the full social graph of an organization — who
+is on the list, who got paid this cycle, and exactly how much each person earns
+— to the bank, the blockchain (if it is paid on-chain), and anyone who can read
+the ledger. For activist groups, diaspora communities sending money home, or
+DAOs paying anonymous contributors, that is not a compliance footnote; it is a
+safety problem.
 
-The initial idea for **KiKiPay** was to shrink what the chain learns about a
-payroll to the absolute minimum:
+So I set out to build the smallest thing that still counts as a real payroll: a
+pot that pays approved members while the chain learns as little as possible. I
+wanted exactly three things to be public, and nothing else:
 
 - **one Merkle root** proving a *set of approved members exists* — without
-  revealing the members;
+  revealing who they are;
 - **one commitment per payment** proving *a payment happened and was
   authorized* — without revealing the payee or the amount;
-- **one counter** so outsiders can audit *that* payroll is flowing — and
-  nothing else.
+- **one counter**, so an outsider can still audit *that* payroll is flowing.
 
-Midnight's data-protection model is the only chain design I found where this
-falls out naturally instead of being bolted on: the Compact contract keeps
-payee secrets, Merkle paths, and amounts as **witnesses** that never leave the
-prover, while `disclose()` publishes exactly the three audit points above —
-each one commented in the contract because every disclosure is a deliberate
-trade.
+The constraint I kept coming back to was that privacy I cannot demonstrate is
+not privacy — I did not want "privacy-preserving" in the marketing sense. That
+is what pulled me to Midnight: the Compact contract keeps member secrets,
+Merkle paths, and amounts as **witnesses** that never leave the prover, and
+`disclose()` turns every public value into a deliberate, reviewable choice
+instead of an oversight. Every disclosure in `kikipay.compact` is commented for
+exactly that reason — the three audit points above are the whole public
+surface.
 
-The scope was deliberately small enough to be *verifiably* private rather
-than "privacy-preserving" in a marketing sense: register a pot (≤16 members,
-tree depth 4), pay a member, rotate the member set — and 14 tests that assert
-the negative property too (no secret, path, or amount ever appears in public
-state). The repo currently ships the contract + deploy pipeline + CLI;
-splits and a browser frontend are the natural next level.
+From there the scope stayed deliberately narrow: three circuits (`registerPot`,
+`pay`, `rotatePot`), a 16-member tree (depth 4), and a test suite that asserts
+the negative property as loudly as the positive one — no secret, path, or
+amount ever reaches public state, and two payments of the same amount stay
+unlinkable across payees.
+
+Two things I did not plan for shaped the build. The toolchain in the original
+brief was already stale — the `@midnight-ntwrk/compact-compiler` npm package no
+longer exists — so I moved to the GitHub-released `compact` CLI and pinned the
+compactc 0.31.1 / runtime 0.16.0 pairing that `create-mn-app` and midnight-js
+4.1.1 expect. And once the deploy pipeline worked I did not stop at one network:
+the same contract runs on Preview and Preprod, which forced the faucet-pause,
+DUST, and wallet-state handling to be genuinely robust rather than a one-off
+script.
+
+The next level is where I started: a browser UI for the payroll operator, and
+real splits rather than a single payee per payment.
 
 ## Screenshots
 
