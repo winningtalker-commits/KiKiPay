@@ -65,3 +65,5 @@ temp/
 
 # Vite-served ZK assets (copied from contracts/managed by scripts/copy-zk-assets.mjs)
 public/contract/
+.vercel
+.env*

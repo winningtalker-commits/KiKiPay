@@ -1,7 +1,8 @@
 name: CI
 
-# Level 1 CI: compile the Compact contract and run the test suite.
-# Deploys stay manual (they need a funded wallet + local proof server).
+# Level 1: compile the Compact contract and run the test suite.
+# Level 2: also build the frontend (typecheck + vite build) so the deployable
+# bundle is verified on every push. Deploys stay manual (Vercel).
 
 on:
   push:
@@ -50,3 +51,12 @@ jobs:
 
       - name: Run test suite
         run: npm test
+
+      - name: Build frontend (Level 2 bundle)
+        run: npm run build
+
+      - name: Verify dist/ output
+        run: |
+          test -f dist/index.html || { echo "missing dist/index.html"; exit 1; }
+          test -d dist/contract/managed/kikipay/zkir || { echo "missing served ZK assets"; exit 1; }
+          ls dist/assets | head
