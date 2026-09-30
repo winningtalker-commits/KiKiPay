@@ -375,6 +375,12 @@ with [termshot](https://github.com/homeport/termshot).
 
 ## Demo Video
 
+**Watch: [`kikipay-demo.webm`](./kikipay-demo.webm)** — recorded walkthrough:
+the live dApp on Vercel (wallet panel, public ledger, typed wallet errors,
+privacy labels), the three compiled circuits, the 14-test suite over the real
+circuits, the offline ledger demo, the Preprod deploy, and the on-chain
+verification against the live contract.
+
 [PLACEHOLDER — I will add the link after recording]
 
 Recording checklist (under 2 minutes, against https://kikipay.vercel.app):
