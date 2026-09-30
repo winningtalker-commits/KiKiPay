@@ -1,8 +1,8 @@
 # KiKiPay — Private Payroll & Splits
 
-> A Midnight dApp that lets an organization pay pot members **without exposing who the members are, who got paid, or how much each payment was** — Compact contract, ZK proofs generated in the browser, React + Vite frontend.
-
 [![CI](https://github.com/winningtalker-commits/KiKiPay/actions/workflows/ci.yml/badge.svg)](https://github.com/winningtalker-commits/KiKiPay/actions/workflows/ci.yml)
+
+> A Midnight dApp that lets an organization pay pot members **without exposing who the members are, who got paid, or how much each payment was** — Compact contract, ZK proofs generated in the browser, React + Vite frontend.
 
 ## Live Demo
 
@@ -71,7 +71,7 @@ authorized, and that recipients are legitimate members — but cannot learn
 
 ## Privacy Model
 
-**What is PUBLIC (on-chain, visible to anyone):**
+**PUBLIC (on-chain, visible to anyone):**
 
 | Ledger field            | Meaning                                                        |
 |-------------------------|----------------------------------------------------------------|
@@ -80,14 +80,14 @@ authorized, and that recipients are legitimate members — but cannot learn
 | `lastPaymentCommitment` | Hiding commitment to the latest (payee, amount) pair           |
 | `paymentCount`          | Number of payments executed                                    |
 
-**What is PRIVATE (circuit inputs via witnesses, never on-chain):**
+**PRIVATE (circuit inputs via witnesses, never on-chain):**
 
 - `paymasterSecret()` — the distributor's secret key
 - `payeeMemberSecret()` — the payee's secret key
 - `payeeProofPath()` / `payeeSideBits()` — the payee's Merkle authentication path
 - `paymentAmount()` — the payment amount
 
-**What the user PROVES without revealing:**
+**PROVED without revealing:**
 
 - *"I am the paymaster bound by the public `paymaster` commitment"*
 - *"The payee is inside the committed member tree `potRoot`"* (Merkle proof)
@@ -153,7 +153,7 @@ DOM.
 For the Level 1 contract pipeline additionally: Docker (proof server) and the
 Compact toolchain — see the *Contract pipeline* section under Run Locally.
 
-## Run Locally
+## Setup & Run Locally
 
 **Frontend (the dApp):**
 
@@ -249,6 +249,30 @@ privacy checks that no secret, path, or amount ever appears in public state.
 npm run cli -- --demo   # offline walkthrough of the circuits (no wallet needed)
 npm run test:e2e        # reconnect to the deployed contract on-chain
 ```
+
+## CI/CD
+
+Every push to `main` and every pull request runs
+[.github/workflows/ci.yml](.github/workflows/ci.yml):
+
+1. **Checkout** the repository.
+2. **Install Node.js 22** (with npm caching).
+3. **Install the Compact toolchain** — the compact 0.5.2 CLI + the 0.31.1
+   compiler, fetched from the official GitHub release.
+4. **`npm install`**.
+5. **`npm run compile`** — compile `contracts/kikipay.compact` and verify the
+   `managed/` artifacts exist (compiled contract JS + prover/verifier keys).
+6. **`npx tsc --noEmit`** — strict typecheck of the frontend.
+7. **`npm test`** — the 14-test suite over the real compiled circuits
+   (circuit logic, state transitions, privacy).
+8. **`npm run build`** — production frontend bundle, verifying the deployable
+   artifact and the served ZK assets.
+
+The badge at the top of this README reflects the latest run on `main`.
+
+## Product Proposal
+
+See [PROPOSAL.md](PROPOSAL.md).
 
 ## Project Structure
 
