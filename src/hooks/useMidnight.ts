@@ -200,15 +200,17 @@ export function useMidnight() {
           //      wallet our key material and it proves with its own
           //      infrastructure; the visitor needs nothing but the extension.
           //   2. fall back to an HTTP proof server (wallet-configured URI,
-          //      else VITE_PROOF_SERVER_URL / local docker default).
+          //      else VITE_PROOF_SERVER_URL / local docker default). The
+          //      Midnight proof server is CORS-open (reflects any Origin),
+          //      so a browser can call it directly.
           let proofProvider;
-          try {
-            const walletProver = await conn.getProvingProvider(
-              zkProviderRef.current! as never,
-            );
+          const walletProver = await conn
+            .getProvingProvider?.(zkProviderRef.current! as never)
+            .catch(() => undefined);
+          if (walletProver) {
             proofProvider = createProofProvider(walletProver as never);
             console.info('[kikipay] proofs delegated to the wallet');
-          } catch {
+          } else {
             const proofServer = config.proverServerUri ?? PROOF_SERVER_URL;
             proofProvider = httpClientProofProvider(
               proofServer,
