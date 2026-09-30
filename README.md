@@ -252,8 +252,129 @@ KiKiPay/
 
 ## Initial Idea
 
-[LEAVE PLACEHOLDER — I will fill this in manually]
+Payroll is one of the most sensitive data flows inside any organization. Every
+month, a traditional payroll run leaks the full social graph of a company —
+who is on the list, who got paid this cycle, and exactly how much each person
+earns — to the bank, the blockchain (if paid on-chain), and anyone who can
+read the ledger. For activist groups, diaspora communities sending money home,
+or DAOs with anonymous contributors, that leak is not a compliance footnote;
+it is a safety problem.
+
+The initial idea for **KiKiPay** was to shrink what the chain learns about a
+payroll to the absolute minimum:
+
+- **one Merkle root** proving a *set of approved members exists* — without
+  revealing the members;
+- **one commitment per payment** proving *a payment happened and was
+  authorized* — without revealing the payee or the amount;
+- **one counter** so outsiders can audit *that* payroll is flowing — and
+  nothing else.
+
+Midnight's data-protection model is the only chain design I found where this
+falls out naturally instead of being bolted on: the Compact contract keeps
+payee secrets, Merkle paths, and amounts as **witnesses** that never leave the
+prover, while `disclose()` publishes exactly the three audit points above —
+each one commented in the contract because every disclosure is a deliberate
+trade.
+
+The scope was deliberately small enough to be *verifiably* private rather
+than "privacy-preserving" in a marketing sense: register a pot (≤16 members,
+tree depth 4), pay a member, rotate the member set — and 14 tests that assert
+the negative property too (no secret, path, or amount ever appears in public
+state). The repo currently ships the contract + deploy pipeline + CLI;
+splits and a browser frontend are the natural next level.
 
 ## Screenshots
 
-[LEAVE PLACEHOLDER — I will add compile output and contract address screenshots]
+Real terminal transcripts from this repo (captured 2026-09-29/30).
+
+**1. Compile — the 3 circuits build with compactc 0.31.1:**
+
+```text
+$ npm run compile
+
+> kikipay@1.0.0 compile
+> compact compile contracts/kikipay.compact contracts/managed/kikipay
+
+Compiling 3 circuits:
+```
+
+**2. Tests — 14 tests over the real compiled circuits (no mocks):**
+
+```text
+$ npm test
+
+ ✓ tests/kikipay.test.ts (14 tests) 305ms
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+```
+
+**3. Offline demo — the public ledger after two payments; note that only
+commitments and the counter change, and 1,000 vs 2,500 units are
+indistinguishable on-chain:**
+
+```text
+$ npm run cli -- --demo
+
+  1. Registering pot with 4 members (root published, WHO stays hidden)
+  ── PUBLIC LEDGER ──────────────────────────────
+  potRoot               : b7c41e1dd5b37537…
+  paymaster (commitment): aa1cfe69e3c5ed57…
+  lastPaymentCommitment : 6b696b697061793a…
+  paymentCount          : 0
+
+  2. Paying bob 1,000 units — amount & identity stay private
+  ── PUBLIC LEDGER ──────────────────────────────
+  lastPaymentCommitment : 1848dcb89c43d9ee…
+  paymentCount          : 1
+
+  3. Paying carol 2,500 units — again, only a commitment appears
+  ── PUBLIC LEDGER ──────────────────────────────
+  lastPaymentCommitment : 8f913befbfcbf78a…
+  paymentCount          : 2
+```
+
+**4. Preprod deploy — the tail of `npm run deploy -- --network preprod`
+(full transcript in the local `deploy-preprod.log`):**
+
+```text
+  Balance: 5,000,000,000 tNight
+
+─── DUST Token Setup ───────────────────────────────────────────
+  Registering 1 NIGHT UTXOs for DUST generation...
+  DUST tokens ready!
+
+─── Deploy Contract ────────────────────────────────────────────
+  Proof server ready!
+  Deploying contract...
+
+  ✅ KiKiPay contract deployed successfully!
+
+  ╔══════════════════════════════════════════════════╗
+  ║  CONTRACT ADDRESS: cbeb5ef7cbb746840d83a10ddd7387e49488605b60ea4205a4cf3eb8450b1ca5
+  ╚══════════════════════════════════════════════════╝
+```
+
+**5. E2E check against the live Preprod contract:**
+
+```text
+$ npm run test:e2e
+
+✅ e2e-check passed
+   contractAddress: cbeb5ef7cbb746840d83a10ddd7387e49488605b60ea4205a4cf3eb8450b1ca5
+   network:         preprod
+   paymentCount:    0
+   potRoot set:     true
+```
+
+**6. Indexer verification — the deployment is queryable on-chain:**
+
+```text
+$ curl -s -X POST https://indexer.preprod.midnight.network/api/v4/graphql \
+    -H 'Content-Type: application/json' \
+    -d '{"query":"{ contractAction(address: \"cbeb5ef7…50b1ca5\") { address __typename transaction { hash } } }"}'
+
+{"data":{"contractAction":{"address":"cbeb5ef7cbb746840d83a10ddd7387e49488605b60ea4205a4cf3eb8450b1ca5",
+"__typename":"ContractDeploy","transaction":{"hash":"66547869633d24bb5f86f14edd6dc22495b8c6a26be64b49dc212fc149077b4c"}}}}
+```
