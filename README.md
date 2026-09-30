@@ -250,6 +250,7 @@ npm run cli -- --demo   # offline walkthrough of the circuits (no wallet needed)
 npm run test:e2e        # reconnect to the deployed contract on-chain
 ```
 
+<!-- EVIDENCE:TESTS:START (generated — do not edit inside) -->
 <details>
 <summary><strong>Full test source</strong> — <code>tests/kikipay.test.ts</code> (430 lines, verbatim, for reviewer verification)</summary>
 
@@ -687,6 +688,7 @@ describe('KiKiPay privacy guarantees', () => {
 ```
 
 </details>
+<!-- EVIDENCE:TESTS:END -->
 
 ## CI/CD
 

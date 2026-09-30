@@ -24,7 +24,9 @@
     "network": "npx tsx cli/network.ts",
     "proof-server:start": "docker compose up -d",
     "proof-server:stop": "docker compose down",
-    "clean": "node scripts/clean.mjs"
+    "clean": "node scripts/clean.mjs",
+    "embed:evidence": "node scripts/embed-test-evidence.mjs",
+    "embed:check": "node scripts/embed-test-evidence.mjs --check"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "^0.16.0",

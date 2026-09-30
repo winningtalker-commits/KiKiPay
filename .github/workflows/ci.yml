@@ -52,6 +52,9 @@ jobs:
       - name: Run test suite
         run: npm test
 
+      - name: README test-evidence embed is current (reviewer window)
+        run: npm run embed:check
+
       - name: Build frontend (Level 2 bundle)
         run: npm run build
 
