@@ -4,6 +4,23 @@
 
 [![CI](https://github.com/winningtalker-commits/KiKiPay/actions/workflows/ci.yml/badge.svg)](https://github.com/winningtalker-commits/KiKiPay/actions/workflows/ci.yml)
 
+## ⚠️ TEMPORARY — Demo Recording Setup (remove before submission)
+
+Scratch space for the demo-video recording session. **This section is
+temporary** — it will be deleted once the video is recorded.
+
+- **Deployment (live demo):** https://kikipay.vercel.app
+- **Demo relay wallet address (preprod, testnet tNIGHT only):**
+
+  ```
+  mn_addr_preprod1083lxlqjy70pnawwuttyzlfl47sj344r3f6rzdgpgsykxgaw7lxs0z89d5
+  ```
+
+  Fund it at the faucet → https://faucet.preprod.midnight.network
+  (or the mirror → https://midnight-tmnight-preprod.nethermind.dev when the
+  primary is `NOT_SERVING`). The address is also needed for the Turnstile
+  form on the faucet page — copy it straight from here.
+
 ## Live Demo
 
 **https://kikipay.vercel.app**
