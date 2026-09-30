@@ -7,15 +7,26 @@
 | Network  | Address                                                                  |
 |----------|--------------------------------------------------------------------------|
 | Preview  | `0x74d6f4b7f37dbb455b4d89edd8d3e6e869ee077c3e27a9671101220203fc261f`     |
-| Preprod  | [not deployed]                                                           |
+| Preprod  | `0xcbeb5ef7cbb746840d83a10ddd7387e49488605b60ea4205a4cf3eb8450b1ca5`     |
 
-*(Deployed to Preview on 2026-09-29. Verify at [midnightexplorer.com](https://midnightexplorer.com) or via the indexer:*
+*(Deployed to Preview on 2026-09-29 and Preprod on 2026-09-29. Verify at
+[midnightexplorer.com](https://midnightexplorer.com) or via the indexer —
+note the query root field is `contractAction` (a `contract` field does not
+exist on this API version):*
 
 ```bash
-curl -s -X POST https://indexer.preview.midnight.network/api/v4/graphql \
+# Preprod (substitute indexer.preview… and the Preview address for Preview)
+curl -s -X POST https://indexer.preprod.midnight.network/api/v4/graphql \
   -H 'Content-Type: application/json' \
-  -d '{"query":"{ contract(address: \"74d6f4b7f37dbb455b4d89edd8d3e6e869ee077c3e27a9671101220203fc261f\") { address state } }"}'
-```)
+  -d '{"query":"{ contractAction(address: \"cbeb5ef7cbb746840d83a10ddd7387e49488605b60ea4205a4cf3eb8450b1ca5\") { address state transaction { hash } } }"}'
+```
+
+A deployed contract answers with `"contractAction": { "address": "…",
+"state": "6d69646e…", "transaction": { "hash": "…" } }` — the `state` blob is
+the serialized contract ledger and the `__typename` is `ContractDeploy`.
+Both deployments were verified live on 2026-09-29:
+
+- Preprod deploy tx: `66547869633d24bb5f86f14edd6dc22495b8c6a26be64b49dc212fc149077b4c`
 
 ### Deployer wallets
 

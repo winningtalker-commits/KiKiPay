@@ -49,6 +49,9 @@ coverage/
 # Private state
 *-state/
 
+# Wallet private-state LevelDB store (created at runtime by midnight-js)
+midnight-level-db/
+
 # Temporary files
 tmp/
 temp/
