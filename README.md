@@ -322,25 +322,41 @@ real splits rather than a single payee per payment.
 
 ## Screenshots
 
-Terminal captures from this repo (taken 2026-09-30): the live build pipeline,
-the offline circuit demo, the Preprod deploy banner, and on-chain
-verification of the deployed contract.
+Captured on 2026-09-30 by running each command and rendering its real output
+with [termshot](https://github.com/homeport/termshot).
 
-### 1. Build — compile (3 circuits), typecheck, and the 14-test suite
+### 1. Compile — the three circuits
 
-![compile, typecheck and tests](docs/screenshots/build.png)
+`compact compile` building `pay`, `registerPot` and `rotatePot`, with their
+circuit sizes, and the resulting proving/verifying keys.
 
-### 2. Offline demo — the public ledger after two payments
+![npm run compile](docs/screenshots/compile.png)
+
+### 2. Tests — all 14 named tests passing
+
+Every test name is visible, including the three privacy groups, so the suite's
+actual coverage can be read without running it.
+
+![npm test -- --reporter=verbose](docs/screenshots/tests.png)
+
+### 3. Offline demo — the public ledger after two payments
 
 Only commitments and the counter change; the 1,000 and 2,500 unit payments
 are indistinguishable on-chain.
 
-![offline demo](docs/screenshots/demo.png)
+![npm run cli -- --demo](docs/screenshots/demo.png)
 
-### 3. Deploy to the Midnight Preprod testnet
+### 4. Deploy to the Midnight Preprod testnet
+
+Recorded transcript of the deploy that produced the address in the table
+above — funding detected, DUST registered, contract deployed.
 
 ![preprod deploy](docs/screenshots/deploy.png)
 
-### 4. Verify — e2e check against the live contract + indexer lookup
+### 5. Verify — e2e check against the live Preprod contract
 
-![e2e and indexer verification](docs/screenshots/verify.png)
+Reconnects to the deployed contract and reads its on-chain state. The raw
+indexer query behind it is in the [Contract Address](#contract-address)
+section.
+
+![npm run test:e2e](docs/screenshots/verify.png)
