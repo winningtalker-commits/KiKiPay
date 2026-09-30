@@ -40,28 +40,56 @@ export function CircuitCall({ midnight }: { midnight: UseMidnightReturn }) {
   const [stage, setStage] = useState<CallStage>({ phase: 'idle' });
   const [ledger, setLedger] = useState<LedgerView | null>(null);
   const [ledgerError, setLedgerError] = useState<string | null>(null);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
 
   const connected = status === 'connected';
 
   // ── read-only public ledger view (works without a wallet) ──────────────────
+  // The public indexer can be slow or briefly unreachable (503s during
+  // maintenance). Every attempt is bounded by a timeout and the whole refresh
+  // retries with backoff; the UI never shows a raw fetch error — only a clear,
+  // human explanation plus a manual Refresh.
+  const fetchLedgerOnce = async (): Promise<'ok' | 'missing' | 'unreachable'> => {
+    const provider = indexerPublicDataProvider(INDEXER_URL, INDEXER_WS_URL);
+    const state = await Promise.race([
+      provider.queryContractState(CONTRACT_ADDRESS),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('indexer timeout')), 12_000),
+      ),
+    ]);
+    if (!state) return 'missing';
+    const l = KikiPayContract.ledger(state.data);
+    setLedger({
+      potRoot: shortHex(l.potRoot, 24),
+      paymaster: shortHex(l.paymaster, 24),
+      lastPaymentCommitment: shortHex(l.lastPaymentCommitment, 24),
+      paymentCount: Number(l.paymentCount),
+    });
+    return 'ok';
+  };
+
   const refreshLedger = async () => {
     setLedgerError(null);
-    try {
-      const provider = indexerPublicDataProvider(INDEXER_URL, INDEXER_WS_URL);
-      const state = await provider.queryContractState(CONTRACT_ADDRESS);
-      if (!state) {
-        setLedgerError('Contract state not indexed yet — try again shortly.');
-        return;
+    setLedgerLoading(true);
+    const backoff = [0, 3_000, 6_000];
+    let outcome: 'ok' | 'missing' | 'unreachable' = 'unreachable';
+    for (const delay of backoff) {
+      if (delay) await new Promise((r) => setTimeout(r, delay));
+      try {
+        outcome = await fetchLedgerOnce();
+        if (outcome === 'ok') break;
+      } catch {
+        outcome = 'unreachable';
       }
-      const l = KikiPayContract.ledger(state.data);
-      setLedger({
-        potRoot: shortHex(l.potRoot, 24),
-        paymaster: shortHex(l.paymaster, 24),
-        lastPaymentCommitment: shortHex(l.lastPaymentCommitment, 24),
-        paymentCount: Number(l.paymentCount),
-      });
-    } catch (e) {
-      setLedgerError(e instanceof Error ? e.message : String(e));
+    }
+    setLedgerLoading(false);
+    if (outcome === 'unreachable') {
+      setLedgerError(
+        'The public Preprod indexer is unreachable right now (maintenance or outage). ' +
+          'The ledger loads automatically once it is back — or hit Refresh to retry.',
+      );
+    } else if (outcome === 'missing') {
+      setLedgerError('Contract state not indexed yet — try again shortly.');
     }
   };
 
@@ -187,12 +215,28 @@ export function CircuitCall({ midnight }: { midnight: UseMidnightReturn }) {
 
       <header className="card-head">
         <h3>Public ledger</h3>
-        <button className="btn btn-ghost" onClick={refreshLedger} data-testid="refresh-ledger">
-          Refresh
+        <button
+          className="btn btn-ghost"
+          onClick={refreshLedger}
+          disabled={ledgerLoading}
+          data-testid="refresh-ledger"
+        >
+          {ledgerLoading ? 'Retrying…' : 'Refresh'}
         </button>
       </header>
 
-      {ledgerError && <p className="muted small">{ledgerError}</p>}
+      {ledgerLoading && (
+        <div className="progress" role="status" data-testid="ledger-progress">
+          <span className="spinner" aria-hidden="true" />
+          Querying the Preprod indexer…
+        </div>
+      )}
+
+      {ledgerError && !ledgerLoading && (
+        <p className="muted small" role="status" data-testid="ledger-error">
+          {ledgerError}
+        </p>
+      )}
 
       {ledger && (
         <div className="ledger" data-testid="ledger">
