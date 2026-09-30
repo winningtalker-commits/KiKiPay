@@ -12,7 +12,7 @@ import {
   getOrCreateWallet,
   formatWalletBackupNotice,
   mnemonicToSeedHex,
-} from '../src/network';
+} from '../cli/network';
 import { setNetworkId, getNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import * as ledger from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { HDWallet, Roles, createKeystore } from '@midnight-ntwrk/wallet-sdk';

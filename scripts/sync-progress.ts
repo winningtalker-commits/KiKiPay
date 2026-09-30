@@ -9,8 +9,8 @@ import { WebSocket } from 'ws';
 // @ts-expect-error wallet sync requires WebSocket
 globalThis.WebSocket = WebSocket;
 
-import { resolveNetwork, getOrCreateWallet } from '../src/network';
-import { createWallet } from '../src/wallet';
+import { resolveNetwork, getOrCreateWallet } from '../cli/network';
+import { createWallet } from '../cli/wallet';
 
 const seconds = Number(process.argv[3] ?? '90') || 90;
 const { network, config: networkConfig } = resolveNetwork({ argv: process.argv });

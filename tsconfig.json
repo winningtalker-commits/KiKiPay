@@ -15,6 +15,6 @@
     "sourceMap": true,
     "types": ["node"]
   },
-  "include": ["src/**/*", "tests/**/*", "scripts/**/*", "contracts/witnesses.ts"],
+  "include": ["src/**/*", "tests/**/*", "scripts/**/*", "cli/**/*", "contracts/witnesses.ts"],
   "exclude": ["node_modules", "dist", "contracts/managed"]
 }
