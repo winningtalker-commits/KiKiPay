@@ -286,95 +286,25 @@ splits and a browser frontend are the natural next level.
 
 ## Screenshots
 
-Real terminal transcripts from this repo (captured 2026-09-29/30).
+Terminal captures from this repo (taken 2026-09-30): the live build pipeline,
+the offline circuit demo, the Preprod deploy banner, and on-chain
+verification of the deployed contract.
 
-**1. Compile — the 3 circuits build with compactc 0.31.1:**
+### 1. Build — compile (3 circuits), typecheck, and the 14-test suite
 
-```text
-$ npm run compile
+![compile, typecheck and tests](docs/screenshots/build.png)
 
-> kikipay@1.0.0 compile
-> compact compile contracts/kikipay.compact contracts/managed/kikipay
+### 2. Offline demo — the public ledger after two payments
 
-Compiling 3 circuits:
-```
+Only commitments and the counter change; the 1,000 and 2,500 unit payments
+are indistinguishable on-chain.
 
-**2. Tests — 14 tests over the real compiled circuits (no mocks):**
+![offline demo](docs/screenshots/demo.png)
 
-```text
-$ npm test
+### 3. Deploy to the Midnight Preprod testnet
 
- ✓ tests/kikipay.test.ts (14 tests) 305ms
+![preprod deploy](docs/screenshots/deploy.png)
 
- Test Files  1 passed (1)
-      Tests  14 passed (14)
-```
+### 4. Verify — e2e check against the live contract + indexer lookup
 
-**3. Offline demo — the public ledger after two payments; note that only
-commitments and the counter change, and 1,000 vs 2,500 units are
-indistinguishable on-chain:**
-
-```text
-$ npm run cli -- --demo
-
-  1. Registering pot with 4 members (root published, WHO stays hidden)
-  ── PUBLIC LEDGER ──────────────────────────────
-  potRoot               : b7c41e1dd5b37537…
-  paymaster (commitment): aa1cfe69e3c5ed57…
-  lastPaymentCommitment : 6b696b697061793a…
-  paymentCount          : 0
-
-  2. Paying bob 1,000 units — amount & identity stay private
-  ── PUBLIC LEDGER ──────────────────────────────
-  lastPaymentCommitment : 1848dcb89c43d9ee…
-  paymentCount          : 1
-
-  3. Paying carol 2,500 units — again, only a commitment appears
-  ── PUBLIC LEDGER ──────────────────────────────
-  lastPaymentCommitment : 8f913befbfcbf78a…
-  paymentCount          : 2
-```
-
-**4. Preprod deploy — the tail of `npm run deploy -- --network preprod`
-(full transcript in the local `deploy-preprod.log`):**
-
-```text
-  Balance: 5,000,000,000 tNight
-
-─── DUST Token Setup ───────────────────────────────────────────
-  Registering 1 NIGHT UTXOs for DUST generation...
-  DUST tokens ready!
-
-─── Deploy Contract ────────────────────────────────────────────
-  Proof server ready!
-  Deploying contract...
-
-  ✅ KiKiPay contract deployed successfully!
-
-  ╔══════════════════════════════════════════════════╗
-  ║  CONTRACT ADDRESS: cbeb5ef7cbb746840d83a10ddd7387e49488605b60ea4205a4cf3eb8450b1ca5
-  ╚══════════════════════════════════════════════════╝
-```
-
-**5. E2E check against the live Preprod contract:**
-
-```text
-$ npm run test:e2e
-
-✅ e2e-check passed
-   contractAddress: cbeb5ef7cbb746840d83a10ddd7387e49488605b60ea4205a4cf3eb8450b1ca5
-   network:         preprod
-   paymentCount:    0
-   potRoot set:     true
-```
-
-**6. Indexer verification — the deployment is queryable on-chain:**
-
-```text
-$ curl -s -X POST https://indexer.preprod.midnight.network/api/v4/graphql \
-    -H 'Content-Type: application/json' \
-    -d '{"query":"{ contractAction(address: \"cbeb5ef7…50b1ca5\") { address __typename transaction { hash } } }"}'
-
-{"data":{"contractAction":{"address":"cbeb5ef7cbb746840d83a10ddd7387e49488605b60ea4205a4cf3eb8450b1ca5",
-"__typename":"ContractDeploy","transaction":{"hash":"66547869633d24bb5f86f14edd6dc22495b8c6a26be64b49dc212fc149077b4c"}}}}
-```
+![e2e and indexer verification](docs/screenshots/verify.png)
