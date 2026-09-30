@@ -19,13 +19,12 @@ infrastructure required from the visitor.
 | Preview  | `0x74d6f4b7f37dbb455b4d89edd8d3e6e869ee077c3e27a9671101220203fc261f`     |
 | Preprod  | `0xcbeb5ef7cbb746840d83a10ddd7387e49488605b60ea4205a4cf3eb8450b1ca5`     |
 
-*(Deployed to Preview on 2026-09-29 and Preprod on 2026-09-29. Verify at
+*(Deployed to Preview and Preprod on 2026-09-29. Verify at
 [midnightexplorer.com](https://midnightexplorer.com) or via the indexer —
-note the query root field is `contractAction` (a `contract` field does not
-exist on this API version):*
+the query root field is `contractAction` (a `contract` field does not exist
+on this API version):*
 
 ```bash
-# Preprod (substitute indexer.preview… and the Preview address for Preview)
 curl -s -X POST https://indexer.preprod.midnight.network/api/v4/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ contractAction(address: \"cbeb5ef7cbb746840d83a10ddd7387e49488605b60ea4205a4cf3eb8450b1ca5\") { address state transaction { hash } } }"}'
@@ -33,10 +32,8 @@ curl -s -X POST https://indexer.preprod.midnight.network/api/v4/graphql \
 
 A deployed contract answers with `"contractAction": { "address": "…",
 "state": "6d69646e…", "transaction": { "hash": "…" } }` — the `state` blob is
-the serialized contract ledger and the `__typename` is `ContractDeploy`.
-Both deployments were verified live on 2026-09-29:
-
-- Preprod deploy tx: `66547869633d24bb5f86f14edd6dc22495b8c6a26be64b49dc212fc149077b4c`
+the serialized contract ledger. The Preprod deploy tx was
+`66547869633d24bb5f86f14edd6dc22495b8c6a26be64b49dc212fc149077b4c`.*
 
 ### Deployer wallets
 
@@ -48,8 +45,8 @@ The wallets that paid the deploy transactions (testnet tNIGHT only):
 | Preprod | `mn_addr_preprod1tzfwpanhw67vegsvalguwpfr2nml58z9ljgltljep9zr30sqdc7s2pmlxl` | [faucet.preprod.midnight.network](https://faucet.preprod.midnight.network) |
 
 The 24-word recovery phrases are **not** committed here — they live only in
-`.midnight-state.json` (gitignored, mode `600`). Back yours up when the deploy
-script prints it; anyone holding the phrase controls the wallet.
+`.midnight-state.json` (gitignored). Back yours up when the deploy script
+prints it; anyone holding the phrase controls the wallet.
 
 ## What This Does
 
@@ -62,6 +59,11 @@ KiKiPay is a payroll pot for a private member list:
    incremented payment counter.
 3. **`rotatePot`** — the paymaster swaps the member set for a new root
    (hiring/firing), proving they are still a member of the *new* set.
+
+The Level 2 frontend drives `registerPot` end to end: click a button, the
+browser derives the member secrets, builds the Merkle tree, generates the ZK
+proof locally, and submits the transaction — the chain sees only the new pot
+root.
 
 An outside observer can verify that payments happened, that they were
 authorized, and that recipients are legitimate members — but cannot learn
@@ -92,8 +94,8 @@ authorized, and that recipients are legitimate members — but cannot learn
 - *"A payment of this (secret) amount to this (secret) member was made"* —
   the public commitment is exactly the image of both secrets and the amount
 
-**Deliberate `disclose()` usage** (required by the rubric — every disclosure
-in the contract is commented):
+**Deliberate `disclose()` usage** (every disclosure in the contract is
+commented):
 
 1. the new Merkle root in `registerPot` / `rotatePot` — membership *changes*
    must be auditable even though members stay anonymous;
@@ -111,8 +113,9 @@ members are, who the paymaster is, who any payment went to, or how much any
 payment was; those values exist only as ZK circuit witnesses, are generated in
 the user's browser at call time, are never rendered by the UI, never appear in
 a transaction payload beyond the proof itself, and never reach the server —
-there is no KiKiPay backend at all (the frontend is a static Vercel site; the
-only network calls are to the public Preprod indexer and the proof server).**
+there is no KiKiPay backend at all (the frontend is a static Vercel/Netlify
+site; the only network calls are to the public Preprod indexer and the proof
+server).**
 
 This is enforced, not asserted: `scripts/ui-smoke.mjs` renders the deployed
 site in headless Chromium and fails if any private-input marker appears in the
@@ -120,42 +123,35 @@ DOM.
 
 ## Tech Stack
 
-- **Midnight network** (preview / preprod testnets, local devnet via Docker)
-- **Compact** language, compiled with `compactc` 0.31.1 (language 0.23.0, runtime 0.16.0) via the `compact` CLI 0.5.2
-  — this is the pairing pinned by `create-mn-app` and matched to midnight-js 4.1.1
-- **Midnight.js SDK 4.1.1** + `@midnight-ntwrk/dapp-connector-api` (Lace)
-- **React 19 + Vite 7** frontend, TypeScript, vercel.json deploy
-- **Node.js 22+**, vitest, Playwright (UI smoke tests)
+- **Midnight network** — Preprod testnet (contract) + public indexer
+- **Compact** language, compiled with `compactc` 0.31.1 (runtime 0.16.0)
+- **Midnight.js SDK 4.1.1** (`midnight-js-contracts`, `midnight-js-network-id`,
+  `midnight-js-http-client-proof-provider`, `midnight-js-indexer-public-data-provider`,
+  `midnight-js-level-private-state-provider`, `midnight-js-protocol`) +
+  `@midnight-ntwrk/dapp-connector-api` (Lace)
+- **React 19 + Vite 7** frontend, TypeScript strict
+- **Lace wallet** (Midnight edition) — connect, network guard, tx relaying
+- **Node.js 22+**, vitest (14 tests), Playwright (UI smoke)
 - **Docker** (proof server + local devnet for the Level 1 CLI pipeline)
-- **Lace wallet** (Midnight edition) — connection + transaction relaying
+- Deploys: **Vercel** (`vercel.json`) or **Netlify** (`netlify.toml`)
+
+> **Note on `@midnight-ntwrk/midnight-js-network-provider`:** the challenge
+> brief lists this package, but it does not exist on npm at any version
+> (verified 2026-09-30: `npm view` → 404). Its function — selecting the
+> Midnight network — lives in `@midnight-ntwrk/midnight-js-network-id`
+> (`setNetworkId`) plus the dapp-connector's `connect(networkId)`, both of
+> which this dApp uses. Same situation as the stale
+> `@midnight-ntwrk/compact-compiler` package documented in the Level 1 brief.
 
 ## Prerequisites
 
-For the **frontend** (Level 2):
-
-- The **Lace wallet** browser extension (Midnight edition) —
+- **Lace wallet** browser extension (Midnight edition) —
   https://www.lace.io/midnight — with a Preprod test wallet
-- Node.js 22 or newer (`node --version`) — CI pins 22, the challenge's
-  reference version
-
-For the **contract pipeline** (Level 1 CLI: compile, deploy, on-chain CLI):
-
+- **Node.js 22** or newer (`node --version`) — CI pins 22
 - npm
-- Docker running (`docker info`) — the proof server runs locally
-- The Compact toolchain (CLI + compiler):
 
-  ```bash
-  # The old `npm i -g @midnight-ntwrk/compact-compiler` package no longer exists.
-  # The toolchain now ships from GitHub releases:
-  mkdir -p /tmp/compact-install && cd /tmp/compact-install
-  curl -sL -o compact-installer.sh \
-    "https://github.com/midnightntwrk/compact/releases/download/compact-v0.5.2/compact-installer.sh"
-  sh compact-installer.sh            # installs the `compact` CLI to ~/.local/bin
-  compact update 0.31.1              # downloads the compactc 0.31.1 compiler
-  compact --version                  # → compact 0.5.2
-  ```
-
-  Make sure `~/.local/bin` and `~/.compact/bin` are on your `PATH`.
+For the Level 1 contract pipeline additionally: Docker (proof server) and the
+Compact toolchain — see the *Contract pipeline* section under Run Locally.
 
 ## Run Locally
 
@@ -168,9 +164,9 @@ npm install
 npm run dev          # → http://localhost:5173
 ```
 
-That's the whole flow for UI development: the compiled contract and ZK keys
-are committed (the browser needs them at runtime), and `npm run dev` copies
-them into `public/` automatically. Open the URL, install/enable Lace, connect.
+That's the whole flow: the compiled contract and ZK keys are committed (the
+browser needs them at runtime) and `npm run dev` copies them into `public/`
+automatically. Open the URL, install/enable Lace, connect, call the circuit.
 
 Production build + local preview:
 
@@ -180,131 +176,78 @@ npm run preview      # serve dist/ at http://localhost:4173
 node scripts/ui-smoke.mjs http://localhost:4173   # headless UI smoke test
 ```
 
+**Deploy the frontend:**
+
+```bash
+# Vercel (vercel.json already configured):
+npm i -g vercel
+vercel --prod             # first run: link the project, accept defaults
+
+# Netlify (netlify.toml already configured):
+npm i -g netlify-cli
+netlify deploy --build --prod
+netlify deploy --build --prod --site <your-site-id>   # or link once interactively
+```
+
+Both platforms run `npm run build` and publish `dist/`; the SPA rewrites and
+the `/contract/*` headers (caching + CORS for the ZK keys) are already in the
+configs. After deploying, paste the live URL into
+[Live Demo](#live-demo) above.
+
 **Contract pipeline (Level 1 CLI: recompile, redeploy, on-chain console):**
 
 ```bash
-git clone https://github.com/winningtalker-commits/KiKiPay
-cd KiKiPay
-npm install
+npm run compile             # requires the Compact toolchain (below)
+npm run proof-server:start  # docker compose up -d
+npm run deploy -- --network preprod   # pauses until the faucet funding lands
+```
 
-# 1. Compile the contract (creates contracts/managed/kikipay with ZK keys)
-npm run compile
+Toolchain install (the old `@midnight-ntwrk/compact-compiler` npm package no
+longer exists — the toolchain ships from GitHub releases):
 
-# 2. Start the proof server (needed for deploys and on-chain calls)
-npm run proof-server:start
-
-#    Equivalent bare-docker form:
-#      docker pull midnightnetwork/proof-server
-#      docker run -p 6300:6300 midnightnetwork/proof-server
-#    Prefer the compose default: docker-compose.yml pins proof-server 8.1.0,
-#    which matches the ledger-v8 / midnight-js 4.1.1 pairing this repo uses
-#    (the `latest` tag is unpinned and can drift out of that pairing).
-
-# 3a. Deploy to the Midnight PREVIEW testnet
-#     (script pauses and prints the wallet address — fund it at the faucet
-#      URL it prints; it detects the funding automatically and continues)
-#     Full walkthrough with faucet/explorer links: see the next section.
-NODE_OPTIONS="--max-old-space-size=12288" npm run deploy -- --network preview
-
-# 3b. …or everything locally on a one-command devnet (node+indexer+proof server)
-npm run setup
+```bash
+mkdir -p /tmp/compact-install && cd /tmp/compact-install
+curl -sL -o compact-installer.sh \
+  "https://github.com/midnightntwrk/compact/releases/download/compact-v0.5.2/compact-installer.sh"
+sh compact-installer.sh            # installs the `compact` CLI to ~/.local/bin
+compact update 0.31.1              # downloads the compactc 0.31.1 compiler
+compact --version                  # → compact 0.5.2
 ```
 
 After deploying, paste the printed contract address into the
 [Contract Address](#contract-address) table above.
 
-## Networks, Wallets & Funding
-
-Everything below was verified live on 2026-09-29. All testnet tokens are free.
-
-### Network cheat sheet
+## Networks & Funding (testnet tNIGHT — all free)
 
 | Resource | Preview | Preprod |
 |---|---|---|
-| **Faucet (tNIGHT)** | https://faucet.preview.midnight.network | https://faucet.preprod.midnight.network |
-| Faucet (alternate) | https://midnight-tmnight-preview.nethermind.dev | https://midnight-tmnight-preprod.nethermind.dev |
-| **Block explorer** | https://midnightexplorer.com (pick network in the UI) | https://midnightexplorer.com |
-| RPC node | https://rpc.preview.midnight.network | https://rpc.preprod.midnight.network |
+| **Faucet** | https://faucet.preview.midnight.network | https://faucet.preprod.midnight.network |
+| **Block explorer** | https://midnightexplorer.com | https://midnightexplorer.com |
 | Indexer (GraphQL) | https://indexer.preview.midnight.network/api/v4/graphql | https://indexer.preprod.midnight.network/api/v4/graphql |
-| Docs: funding guide | [docs.midnight.network/guides/acquire-tokens](https://docs.midnight.network/guides/acquire-tokens) | same |
-| Docs: deploy guide | [docs.midnight.network/guides/deploy-and-operate](https://docs.midnight.network/guides/deploy-and-operate) | same |
 
-### The wallet
-
-- **Lace (Midnight edition)** — the official browser-extension wallet:
-  https://www.lace.io/midnight
-- `npm run deploy` generates a **24-word BIP-39 recovery phrase** the first
-  time it runs on each network. It is printed **once** in the terminal and
-  stored in `.midnight-state.json` (gitignored). The same phrase restores the
-  identical wallet in Lace — import it there to watch your tNIGHT balance in
-  a GUI (optional; the deploy pipeline does not need Lace).
-- Each network gets its **own** phrase/address (per-network wallets in the
-  state file) — don't reuse one network's phrase on the other.
-
-### Funding flow (both networks are the same 4 steps)
-
-1. Start the deploy for your target network:
-
-   ```bash
-   # Preview (recommended for Level 1):
-   NODE_OPTIONS="--max-old-space-size=12288" npm run deploy -- --network preview
-
-   # …or Preprod:
-   NODE_OPTIONS="--max-old-space-size=12288" npm run deploy -- --network preprod
-   ```
-
-2. When it reaches **─── Fund Wallet ───** it prints your `Wallet address:`
-   (a `mnaddr…` bech32 string) and pauses, polling every 10 s.
-3. Open the matching **faucet** link from the table above, paste the address,
-   request tNIGHT, and grab a coffee — the script **detects the funding
-   automatically** and continues into DUST registration + the deploy tx.
-4. Verify the results:
-   - `Wallet Address` / `Balance` lines in the deploy output,
-   - the **CONTRACT ADDRESS** banner at the end → paste into the
-     [Contract Address](#contract-address) table,
-   - look the contract address up on **https://midnightexplorer.com** (a
-     fresh deployment can take a minute to appear in the explorer).
-
-### After the deploy
-
-```bash
-npm run network preview          # confirm the active network + last deploy address
-npm run check-balance            # tNIGHT / tDUST balances
-npm run cli                      # interactive console against the deployed contract
-npm run cli -- --demo            # offline circuit demo (no wallet needed)
-```
-
-For preprod, substitute `preprod` in every command. Re-running the deploy is
-safe — the seed is preserved and the script skips funding if the wallet
-already holds tNIGHT.
+`npm run deploy` generates a 24-word BIP-39 phrase per network (printed once,
+stored gitignored in `.midnight-state.json`). Import it into Lace to watch the
+balance. Re-running the deploy is safe — it skips funding if the wallet is
+already funded.
 
 ## Run Tests
 
-On a fresh clone, **compile first**: the suite executes the real compiled
-circuits, and `contracts/managed/` is generated by the compiler (it is
-gitignored, so it is not in the repo). Running `npm test` before compiling
-fails with a module-not-found error on `contracts/managed/kikipay/`.
+On a fresh clone, **compile first** (or skip — `contracts/managed/` is
+committed, so the tests run out of the box on this repo):
 
 ```bash
-npm run compile   # ~1 min — generates contracts/managed/kikipay with ZK keys
 npm test          # 14 tests: circuit logic, state transitions, privacy
+npm run typecheck # tsc --noEmit
 ```
-
-The three `describe` blocks map to exactly those three areas:
-`KiKiPay pure circuit logic` (5 tests), `KiKiPay ledger state transitions`
-(5 tests), `KiKiPay privacy guarantees` (4 tests).
 
 The suite executes the **real compiled circuits** through the Compact runtime
 (no mocks): Merkle membership from both child positions, paymaster
 authorization (positive + negative), pot registration/rotation, and explicit
 privacy checks that no secret, path, or amount ever appears in public state.
 
-Bonus commands:
-
 ```bash
 npm run cli -- --demo   # offline walkthrough of the circuits (no wallet needed)
-npm run test:e2e        # reconnect to the deployed contract on-chain (after deploy)
-npm run typecheck       # tsc --noEmit
+npm run test:e2e        # reconnect to the deployed contract on-chain
 ```
 
 ## Project Structure
@@ -328,39 +271,29 @@ KiKiPay/
 │   ├── App.tsx / main.tsx     ← app shell + entry
 │   └── shims.ts, crypto-shim  ← Node-API browser shims (buffer/process/…)
 ├── cli/                       ← Level 1 deploy tooling + console (node-side)
-│   ├── deploy.ts              ← faucet-pause → DUST → deploy pipeline
-│   ├── cli.ts                 ← interactive console (+ `--demo` offline mode)
-│   └── …                      ← network/wallet/merkle/check-balance/setup
 ├── tests/
 │   └── kikipay.test.ts        ← 14 tests over the real compiled circuits
 ├── scripts/
 │   ├── ui-smoke.mjs           ← Playwright: renders the site, asserts UI + privacy
-│   ├── copy-zk-assets.mjs     ← managed → public/ for Vite (predev/prebuild)
+│   ├── copy-zk-assets.mjs     ← managed → public/ (runs before dev/build)
 │   └── e2e-check.ts           ← node-side on-chain reconnect check
 ├── public/                    ← favicon + vite-served ZK assets (gitignored copy)
 ├── docs/screenshots/          ← README screenshots
 ├── index.html, vite.config.ts ← Vite entry + browser shim config
-├── vercel.json                ← deploy config (SPA rewrites, asset caching)
+├── vercel.json, netlify.toml  ← deploy configs (SPA rewrites, /contract headers)
 ├── .github/workflows/ci.yml   ← toolchain → compile → test → typecheck → build
 ├── docker-compose.yml         ← local devnet (node, indexer, proof server)
 └── README.md
 ```
-
-The ZK artifacts live in `contracts/managed/kikipay/` — the `create-mn-app`
-convention. Since Level 2 they are **committed**: the browser dApp fetches
-them at runtime to generate proofs locally (same approach as the official
-midnight-wallet-dapp template). Some challenge outlines show a top-level
-`managed/` instead; it is the same compiler output, nested beside the contract.
 
 ## Initial Idea
 
 I started from a problem I kept running into: payroll leaks. Every month a
 traditional payroll run exposes the full social graph of an organization — who
 is on the list, who got paid this cycle, and exactly how much each person earns
-— to the bank, the blockchain (if it is paid on-chain), and anyone who can read
-the ledger. For activist groups, diaspora communities sending money home, or
-DAOs paying anonymous contributors, that is not a compliance footnote; it is a
-safety problem.
+— to the bank, the blockchain, and anyone who can read the ledger. For activist
+groups, diaspora communities sending money home, or DAOs paying anonymous
+contributors, that is not a compliance footnote; it is a safety problem.
 
 So I set out to build the smallest thing that still counts as a real payroll: a
 pot that pays approved members while the chain learns as little as possible. I
@@ -377,9 +310,7 @@ not privacy — I did not want "privacy-preserving" in the marketing sense. That
 is what pulled me to Midnight: the Compact contract keeps member secrets,
 Merkle paths, and amounts as **witnesses** that never leave the prover, and
 `disclose()` turns every public value into a deliberate, reviewable choice
-instead of an oversight. Every disclosure in `kikipay.compact` is commented for
-exactly that reason — the three audit points above are the whole public
-surface.
+instead of an oversight.
 
 From there the scope stayed deliberately narrow: three circuits (`registerPot`,
 `pay`, `rotatePot`), a 16-member tree (depth 4), and a test suite that asserts
@@ -387,17 +318,18 @@ the negative property as loudly as the positive one — no secret, path, or
 amount ever reaches public state, and two payments of the same amount stay
 unlinkable across payees.
 
-Two things I did not plan for shaped the build. The toolchain in the original
-brief was already stale — the `@midnight-ntwrk/compact-compiler` npm package no
-longer exists — so I moved to the GitHub-released `compact` CLI and pinned the
-compactc 0.31.1 / runtime 0.16.0 pairing that `create-mn-app` and midnight-js
-4.1.1 expect. And once the deploy pipeline worked I did not stop at one network:
-the same contract runs on Preview and Preprod, which forced the faucet-pause,
-DUST, and wallet-state handling to be genuinely robust rather than a one-off
-script.
+Level 2 added the operator UI: connect Lace, and the browser does the proving.
+Two things I did not plan for shaped the build: the toolchain in the original
+brief was already stale (the `@midnight-ntwrk/compact-compiler` npm package no
+longer exists, and Level 2's `midnight-js-network-provider` never did), so I
+pinned the compactc 0.31.1 / runtime 0.16.0 pairing that midnight-js 4.1.1
+expects and used `midnight-js-network-id` for network selection instead. And
+once the deploy pipeline worked I did not stop at one network: the same
+contract runs on Preview and Preprod, which forced the faucet-pause, DUST, and
+wallet-state handling to be genuinely robust rather than a one-off script.
 
-The next level is where I started: a browser UI for the payroll operator, and
-real splits rather than a single payee per payment.
+The next level is where I started: real splits rather than a single payee per
+payment.
 
 ## Screenshots
 
@@ -406,37 +338,21 @@ with [termshot](https://github.com/homeport/termshot).
 
 ### 1. Compile — the three circuits
 
-`compact compile` building `pay`, `registerPot` and `rotatePot`, with their
-circuit sizes, and the resulting proving/verifying keys.
-
 ![npm run compile](docs/screenshots/compile.png)
 
 ### 2. Tests — all 14 named tests passing
-
-Every test name is visible, including the three privacy groups, so the suite's
-actual coverage can be read without running it.
 
 ![npm test -- --reporter=verbose](docs/screenshots/tests.png)
 
 ### 3. Offline demo — the public ledger after two payments
 
-Only commitments and the counter change; the 1,000 and 2,500 unit payments
-are indistinguishable on-chain.
-
 ![npm run cli -- --demo](docs/screenshots/demo.png)
 
 ### 4. Deploy to the Midnight Preprod testnet
 
-Recorded transcript of the deploy that produced the address in the table
-above — funding detected, DUST registered, contract deployed.
-
 ![preprod deploy](docs/screenshots/deploy.png)
 
 ### 5. Verify — e2e check against the live Preprod contract
-
-Reconnects to the deployed contract and reads its on-chain state. The raw
-indexer query behind it is in the [Contract Address](#contract-address)
-section.
 
 ![npm run test:e2e](docs/screenshots/verify.png)
 
@@ -448,11 +364,12 @@ Recording checklist (under 2 minutes, against https://kikipay.vercel.app):
 
 1. **Connect** — click "Connect Lace wallet", approve in Lace, and show the
    shielded + transparent addresses appear on screen.
-2. **Call the circuit** — click "Call registerPot"; the loading state shows
-   the proof being generated locally ("Generating ZK proof locally…").
+2. **Call the circuit** — click "Call registerPot — Proved without revealing
+   your input"; the loading state shows the proof being generated locally
+   ("Generating ZK proof locally…").
 3. **On-chain result** — the success panel shows the tx id and new pot root;
    the Public Ledger panel below refreshes from the Preprod indexer.
 4. **Privacy point** — show that nowhere in the UI were member secrets or
    amounts displayed; the only values on screen are what the chain publishes
-   (root, commitments, counter). Mention the button's label:
-   "Proved without revealing your input".
+   (root, commitments, counter). Point out the button's label and the footer:
+   "private inputs never leave your browser".
