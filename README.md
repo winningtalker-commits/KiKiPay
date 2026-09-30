@@ -103,7 +103,8 @@ in the contract is commented):
 
 ## Prerequisites
 
-- Node.js ≥ 22 (`node --version`)
+- Node.js 22 or newer (`node --version`) — CI pins 22, which is the
+  challenge's reference version; v22+ runs the same pipeline
 - npm
 - Docker running (`docker info`)
 - The Compact toolchain (CLI + compiler):
@@ -133,6 +134,13 @@ npm run compile
 
 # 2. Start the proof server (needed for deploys and on-chain calls)
 npm run proof-server:start
+
+#    Equivalent bare-docker form:
+#      docker pull midnightnetwork/proof-server
+#      docker run -p 6300:6300 midnightnetwork/proof-server
+#    Prefer the compose default: docker-compose.yml pins proof-server 8.1.0,
+#    which matches the ledger-v8 / midnight-js 4.1.1 pairing this repo uses
+#    (the `latest` tag is unpinned and can drift out of that pairing).
 
 # 3a. Deploy to the Midnight PREVIEW testnet
 #     (script pauses and prints the wallet address — fund it at the faucet
