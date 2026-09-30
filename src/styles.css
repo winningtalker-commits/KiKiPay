@@ -289,3 +289,47 @@ code {
     align-items: flex-start;
   }
 }
+
+/* mobile polish (Level 3 rubric: mobile-responsive layout) */
+@media (max-width: 560px) {
+  .shell {
+    padding: 20px 12px 48px;
+    gap: 14px;
+  }
+  .card {
+    padding: 16px 14px;
+    border-radius: 12px;
+  }
+  .logo {
+    font-size: 1.6rem;
+  }
+  .tagline {
+    font-size: 0.92rem;
+  }
+  .card-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .card-head .mono.small {
+    word-break: break-all;
+  }
+  .btn {
+    width: 100%;
+  }
+  .card-head .btn {
+    width: auto;
+  }
+  .kv {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .kv .v {
+    text-align: left;
+  }
+  .progress,
+  .success,
+  .error {
+    font-size: 0.85rem;
+  }
+}
