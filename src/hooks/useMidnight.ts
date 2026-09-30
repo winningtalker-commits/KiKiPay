@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
+import { createProofProvider } from '@midnight-ntwrk/midnight-js-types';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { findDeployedContract, type DeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
@@ -194,12 +195,27 @@ export function useMidnight() {
       // connecting state on the call panel until this resolves.
       void (async () => {
         try {
-          const proofServer =
-            config.proverServerUri ?? PROOF_SERVER_URL;
-          const proofProvider = httpClientProofProvider(
-            proofServer,
-            zkProviderRef.current!,
-          );
+          // Proving strategy, best path first:
+          //   1. delegate to the WALLET (Lace) — getProvingProvider hands the
+          //      wallet our key material and it proves with its own
+          //      infrastructure; the visitor needs nothing but the extension.
+          //   2. fall back to an HTTP proof server (wallet-configured URI,
+          //      else VITE_PROOF_SERVER_URL / local docker default).
+          let proofProvider;
+          try {
+            const walletProver = await conn.getProvingProvider(
+              zkProviderRef.current! as never,
+            );
+            proofProvider = createProofProvider(walletProver as never);
+            console.info('[kikipay] proofs delegated to the wallet');
+          } catch {
+            const proofServer = config.proverServerUri ?? PROOF_SERVER_URL;
+            proofProvider = httpClientProofProvider(
+              proofServer,
+              zkProviderRef.current!,
+            );
+            console.info(`[kikipay] proofs via proof server ${proofServer}`);
+          }
 
           // Serialization helpers: midnight-js hands us ledger Transaction
           // objects; the DApp connector speaks hex strings of the same bytes
