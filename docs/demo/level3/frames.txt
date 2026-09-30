@@ -1,0 +1,17 @@
+file '/workspaces/AstroPay/KiKiPay/docs/demo/level3/card-title.png'
+duration 4
+file '/workspaces/AstroPay/KiKiPay/docs/demo/level3/live-dapp.png'
+duration 7
+file '/workspaces/AstroPay/KiKiPay/docs/screenshots/demo.png'
+duration 7
+file '/workspaces/AstroPay/KiKiPay/docs/screenshots/deploy.png'
+duration 6
+file '/workspaces/AstroPay/KiKiPay/docs/screenshots/verify.png'
+duration 6
+file '/workspaces/AstroPay/KiKiPay/docs/demo/level3/tests.png'
+duration 8
+file '/workspaces/AstroPay/KiKiPay/docs/demo/level3/readme-badge.png'
+duration 6
+file '/workspaces/AstroPay/KiKiPay/docs/demo/level3/card-close.png'
+duration 4
+file '/workspaces/AstroPay/KiKiPay/docs/demo/level3/card-close.png'

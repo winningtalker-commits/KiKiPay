@@ -1,7 +1,7 @@
 # Product Proposal
 
 ## What is the product, and who uses it?
-KiKiPay is a private payroll pot. A sponsor registers a pot by committing — as a Merkle root — to an approved member list of up to 16 recipients; a paymaster then pays any member any amount, and the chain sees only a hiding commitment to the (payee, amount) pair and a payment counter. Membership changes go through `rotatePot`, which swaps the root while proving the paymaster still belongs to the *new* set. Nobody watching the chain learns who the members are, who got paid, when a specific person was paid, or how much — yet every payment is publicly verifiable as authorized and membership-correct.
+KiKiPay is a private payroll pot: **payments anyone can verify, payrolls no one can watch.** A sponsor registers a pot by committing — as a Merkle root — to an approved member list of up to 16 recipients; a paymaster then pays any member any amount, and the chain sees only a hiding commitment to the (payee, amount) pair and a payment counter. Membership changes go through `rotatePot`, which swaps the root while proving the paymaster still belongs to the *new* set. Nobody watching the chain learns who the members are, who got paid, when a specific person was paid, or how much — yet every payment is publicly verifiable as authorized and membership-correct.
 
 Who uses it: any organization whose payment graph is sensitive —
 - **DAOs and open-source projects** paying contributors without exposing identity or rate (pseudonymous contributors are the norm, but today payouts deanonymize them on-chain),

@@ -825,6 +825,8 @@ with [termshot](https://github.com/homeport/termshot).
 
 ## Demo Video
 
+**Level 3 one-minute demo:** ▶ [`kikipay-level3.mp4`](docs/demo/kikipay-level3.mp4) — live Vercel dApp, the connected session / Preprod deploy / on-chain verification, `npm test` with 14 passing, and the green CI badge on this README.
+
 **Watch: [`kikipay-demo.webm`](./kikipay-demo.webm)** — recorded walkthrough:
 the live dApp on Vercel (wallet panel, public ledger, typed wallet errors,
 privacy labels), the three compiled circuits, the 14-test suite over the real
