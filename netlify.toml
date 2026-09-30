@@ -1,0 +1,25 @@
+# KiKiPay on Netlify — mirrors vercel.json (framework: vite).
+# The dApp is a static SPA; the Midnight network access is direct from the
+# browser (Preprod indexer + Lace wallet + proof generation client-side).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# SPA fallback: every route serves the app shell.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# The compiled ZK proving/verifying keys and zkir files are fetched at runtime
+# by BrowserZkConfigProvider. Content-addressed per release: cache hard, and
+# allow the browser dApp (any origin) to fetch them.
+[[headers]]
+  for = "/contract/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    Access-Control-Allow-Origin = "*"
